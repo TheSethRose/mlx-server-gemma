@@ -177,13 +177,22 @@ def parse_tool_calls(text: str) -> list[dict]:
 def build_messages_for_template(messages: list) -> list:
     result = []
     for msg in messages:
-        entry = {"role": msg.role}
-        if msg.content is not None:
-            entry["content"] = msg.content
-        if msg.tool_calls:
-            entry["tool_calls"] = msg.tool_calls
-        if msg.tool_call_id:
-            entry["tool_call_id"] = msg.tool_call_id
+        if isinstance(msg, dict):
+            entry = {"role": msg.get("role", "user")}
+            if msg.get("content") is not None:
+                entry["content"] = msg["content"]
+            if msg.get("tool_calls"):
+                entry["tool_calls"] = msg["tool_calls"]
+            if msg.get("tool_call_id"):
+                entry["tool_call_id"] = msg["tool_call_id"]
+        else:
+            entry = {"role": msg.role}
+            if msg.content is not None:
+                entry["content"] = msg.content
+            if msg.tool_calls:
+                entry["tool_calls"] = msg.tool_calls
+            if msg.tool_call_id:
+                entry["tool_call_id"] = msg.tool_call_id
         result.append(entry)
     return result
 
@@ -397,7 +406,14 @@ async def responses_endpoint(request: ResponsesRequest):
     if isinstance(request.input, str):
         messages = [{"role": "user", "content": request.input}]
     else:
-        messages = [{"role": msg.role, "content": msg.content} for msg in request.input if msg.content is not None]
+        messages = []
+        for msg in request.input:
+            if isinstance(msg, dict):
+                if msg.get("content") is not None:
+                    messages.append({"role": msg.get("role", "user"), "content": msg["content"]})
+            else:
+                if msg.content is not None:
+                    messages.append({"role": msg.role, "content": msg.content})
 
     template_kwargs = build_template_kwargs(request)
     prompt = prepare_prompt(messages, request.tools, template_kwargs)
