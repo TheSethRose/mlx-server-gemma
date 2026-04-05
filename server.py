@@ -217,8 +217,7 @@ async def list_models():
     }
 
 
-@app.post("/v1/chat/completions")
-async def chat_completions(request: ChatCompletionRequest):
+async def _handle_chat(request: ChatCompletionRequest):
     if model is None or tokenizer is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
@@ -277,6 +276,16 @@ async def chat_completions(request: ChatCompletionRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/v1/chat/completions")
+async def chat_completions(request: ChatCompletionRequest):
+    return await _handle_chat(request)
+
+
+@app.post("/v1/responses")
+async def responses(request: ChatCompletionRequest):
+    return await _handle_chat(request)
 
 
 @app.get("/health")
