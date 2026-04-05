@@ -5,6 +5,7 @@ OpenAI-compatible API server for running MLX models on Apple Silicon.
 ## Features
 
 - OpenAI-compatible `/v1/chat/completions` endpoint
+- Tool calling support (function calls)
 - Streaming responses
 - Health check endpoint
 - Built on `mlx-vlm` with TurboQuant KV cache support
@@ -69,6 +70,74 @@ curl http://localhost:8080/v1/chat/completions \
     "model": "gemma-4",
     "messages": [{"role": "user", "content": "Hello!"}],
     "stream": true
+  }'
+```
+
+### Tool Calling
+
+```bash
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma-4",
+    "messages": [{"role": "user", "content": "What is the weather in San Francisco?"}],
+    "tools": [{
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "description": "Get current weather for a location",
+        "parameters": {
+          "type": "object",
+          "properties": {"location": {"type": "string"}},
+          "required": ["location"]
+        }
+      }
+    }],
+    "max_tokens": 256,
+    "temperature": 0.1
+  }'
+```
+
+Response:
+
+```json
+{
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "call_abc123",
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"location\": \"San Francisco\"}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls"
+    }
+  ]
+}
+```
+
+To complete the tool call, send the tool response back:
+
+```bash
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma-4",
+    "messages": [
+      {"role": "user", "content": "What is the weather in San Francisco?"},
+      {"role": "assistant", "content": null, "tool_calls": [{"id": "call_abc123", "type": "function", "function": {"name": "get_weather", "arguments": "{\"location\": \"San Francisco\"}"}}]},
+      {"role": "tool", "tool_call_id": "call_abc123", "content": "Sunny, 72°F"}
+    ],
+    "tools": [{"type": "function", "function": {"name": "get_weather", "description": "Get current weather", "parameters": {"type": "object", "properties": {"location": {"type": "string"}}, "required": ["location"]}}}],
+    "max_tokens": 256
   }'
 ```
 
@@ -138,26 +207,19 @@ The server exposes an OpenAI-compatible API at `http://localhost:8080/v1`. Any a
 ### VS Code — Continue
 
 1. Install the [Continue](https://marketplace.visualstudio.com/items?itemName=Continue.continue) extension
-2. Open `~/.continue/config.json`
+2. Open `~/.continue/config.yaml`
 3. Add a custom OpenAI provider:
 
-```json
-{
-  "models": [
-    {
-      "title": "Gemma 4 (Local)",
-      "provider": "openai",
-      "model": "gemma-4",
-      "apiBase": "http://localhost:8080/v1"
-    }
-  ],
-  "tabAutocompleteModel": {
-    "title": "Gemma 4 (Local)",
-    "provider": "openai",
-    "model": "gemma-4",
-    "apiBase": "http://localhost:8080/v1"
-  }
-}
+```yaml
+models:
+  - name: Gemma 4 (Local)
+    provider: openai
+    model: gemma-4
+    apiBase: http://localhost:8080/v1
+    roles:
+      - chat
+      - edit
+      - apply
 ```
 
 ### VS Code — Cline
