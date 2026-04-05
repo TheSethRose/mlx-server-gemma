@@ -204,6 +204,32 @@ Full collection: [mlx-community/gemma-4](https://huggingface.co/collections/mlx-
 
 The server exposes an OpenAI-compatible API at `http://localhost:8080/v1`. Any app that supports a custom OpenAI base URL can use it.
 
+### VS Code — GitHub Copilot Chat (Bring Your Own Key)
+
+1. Open VS Code **Settings** → search for `chat language models`
+2. Click **Edit in settings.json** (or edit `chatLanguageModels.json` directly)
+3. Add a `customoai` provider:
+
+```json
+{
+  "name": "Localhost",
+  "vendor": "customoai",
+  "models": [
+    {
+      "id": "gemma-4",
+      "name": "Gemma 4 26B",
+      "url": "http://localhost:8080/v1/responses",
+      "toolCalling": true,
+      "vision": true,
+      "maxInputTokens": 128000,
+      "maxOutputTokens": 16000
+    }
+  ]
+}
+```
+
+**Important:** The URL must end with `/v1/responses` — VS Code only enables tool calling (agent mode) for custom models when the URL contains `/responses`.
+
 ### VS Code — Continue
 
 1. Install the [Continue](https://marketplace.visualstudio.com/items?itemName=Continue.continue) extension
@@ -232,9 +258,9 @@ models:
    - **Model**: `gemma-4`
    - **API Key**: `not-needed` (any value works)
 
-### VS Code — Copilot Chat (via LM Studio proxy)
+### VS Code — Copilot Chat
 
-If you want to use GitHub Copilot Chat with a local model, the easiest path is to point Copilot's custom endpoint at this server. However, Copilot doesn't support arbitrary OpenAI endpoints. Use **Continue** or **Cline** instead.
+See **VS Code — GitHub Copilot Chat (Bring Your Own Key)** above for the native configuration.
 
 ### Cursor
 
@@ -275,6 +301,8 @@ Use these values:
 | **Base URL** | `http://localhost:8080/v1` |
 | **API Key**  | `not-needed` (any string)  |
 | **Model**    | `gemma-4`                  |
+
+For VS Code agent mode, use `http://localhost:8080/v1/responses` as the URL.
 
 ## License
 
